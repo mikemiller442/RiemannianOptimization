@@ -9,13 +9,16 @@ import constant
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 
+
 def sigmoidPrime(x):
     s = sigmoid(x)
     return np.multiply(s,1-s)
 
+
 def ReLu(x):
     x[x < 0] = 0
     return x
+
 
 def ReLuPrime(x):
     x[x < 0] = 0
@@ -23,6 +26,8 @@ def ReLuPrime(x):
     return x
 
 
+# Cross-correlates every kernel in the kernel tensor with the intput x
+# @return numpy nD array This returns the feature map tensor
 def convolve(x, kernels, biases):
     r = ReLu
     pixels = x.reshape(constant.inputImgDim[0],constant.inputImgDim[1])
@@ -34,6 +39,10 @@ def convolve(x, kernels, biases):
     return map
 
 
+# Performs pooling on the output of a convolutional layer
+# WARNING: only pools in 2 x 2 grids because rnn has not been extended
+# to pool feature maps with odd dimensions.
+# TODO: extend rnn to pool for arbitrary feature maps
 def pool(featureMap):
     poolingTensor = np.zeros((featureMap.shape[0],featureMap.shape[1],featureMap.shape[2]))
     pooled = np.zeros((featureMap.shape[0], featureMap.shape[1]//2,featureMap.shape[2]//2))
@@ -56,8 +65,11 @@ def pool(featureMap):
     return pooled, poolingTensor
 
 
+# Performs backpropagation through a convolutional + pooling layer
+# WARNING: doesn't return the downstream gradient because this program
+# has not been extended to multiple convolutional layers yet.
+# TODO: extend rnn to have multiple conv + pool layers
 def convBP(dy, poolingTensor, pixels):
-
     # propagate through pooling layer
     for p in range(poolingTensor.shape[0]):
         for u in range(poolingTensor.shape[1]):
@@ -79,6 +91,10 @@ def convBP(dy, poolingTensor, pixels):
     return db, dw
 
 
+# Implements Cayley SGD with Momentum as in Li, Fuxin, Todorovic
+# @param matrix This is the matrix with the enforced orthogonality constraints
+# @param momentum This is the momentum vector used in the algorithm
+# @param euclidGrad This is the euclidean gradient calculated in normal backpropagation
 def CayleySGD(matrix, momentum, euclidGrad):
     momentum = constant.momentumCoef*momentum - euclidGrad
     What = momentum @ matrix.transpose() - (1/2)*matrix @ (matrix.transpose() @ momentum @ matrix.transpose())
@@ -91,6 +107,9 @@ def CayleySGD(matrix, momentum, euclidGrad):
     return Y, momentum
 
 
+# Learns the convolutional neural network
+# TODO: extend learn to accommodate more than one convolutional + pooling
+# layer in the architecture
 def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
     print("In rnn.learn")
     if (constant.sigmoidFunction == 1):
@@ -105,7 +124,6 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
 
     r = ReLu
     rp = ReLuPrime
-
 
     OutputList = []
     ActivationList = []
@@ -186,11 +204,10 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
 
                 x = desMat[k + j*constant.batchSize]
 
-                # Starting Convolutional and Pooling Layers
+                ## Starting Convolutional and Pooling Layers
                 map = convolve(x, kernels[0], biases[0])
                 pooled, poolingTensor = pool(map)
                 ActivationList[0] = np.vstack(([1],pooled.reshape(pooled.shape[0]*pooled.shape[1]*pooled.shape[2],1)))
-
                 ## Done with Convolutional and Pooling Layers
 
                 # # First activation if there are zero convolutional layers
@@ -205,7 +222,6 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
 
                 OutputList[constant.numLayers-1] = weights[constant.numLayers-1] @ ActivationList[constant.numLayers-1]
                 ActivationList[constant.numLayers] = g(OutputList[constant.numLayers-1]).reshape(OutputList[constant.numLayers-1].shape[0],1)
-
 
 
                 OuterDeltaList[constant.numLayers - 1] = ActivationList[constant.numLayers] - ytrain[k + j*constant.batchSize]
@@ -258,7 +274,8 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
 
     return weights
 
-
+# validates the model on a validation set during training
+# @return int This returns the number of correct predictions in validation set
 def validate(kernels, biases, weights, validDesMat, vyTrain):
     OutputList = []
     ActivationList = []
@@ -322,10 +339,7 @@ def validate(kernels, biases, weights, validDesMat, vyTrain):
                 count+=1
 
     print(count)
-    print(validDesMat.shape[0])
     return count
-
-
 
 
 

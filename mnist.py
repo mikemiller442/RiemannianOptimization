@@ -11,7 +11,7 @@ class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
 
 weightMatrixNames = ["w1.npy", "w2.npy", "w3.npy", "w4.npy", "w5.npy"]
 
-# load data for training
+## load data for training
 df = pd.read_csv('fashion-mnist/fashion-mnist_train.csv')
 
 ## set up data for just two classes
@@ -47,16 +47,12 @@ biases = []
 weights = []
 
 np.random.seed(0)
-
 kernels.append(np.random.rand(constant.numKernels[0],constant.maskHeight,constant.maskWidth))
 biases.append(np.random.rand(constant.numKernels[0],1))
 
-# for l in range(constant.numLayers):
-#     weights.append(np.random.rand(constant.weightDims[l+1],constant.weightDims[l]+1))
-
-
-# Xavier Initialization
 if (constant.riemann == 1):
+    # Constructs random positive definite matrix and chooses the eigenvectors
+    # as rows for the weight matrix, which are orthogonal by the Spectral Theorem
     A = np.random.rand(constant.weightDims[0]+1,constant.weightDims[0]+1)
     P = (A + np.transpose(A))/2 + (constant.weightDims[0]+1)*np.eye(constant.weightDims[0]+1)
     vals, vecs = np.linalg.eig(P)
@@ -68,17 +64,15 @@ if (constant.riemann == 1):
         limit = math.sqrt(3.0*scale)
         weights.append(np.random.uniform(-limit, limit, size = (constant.weightDims[l+1],constant.weightDims[l]+1)))
 else:
+    # Xavier Initialization
     for l in range(constant.numLayers):
         scale = 1/max(1.0,(constant.weightDims[l+1] + constant.weightDims[l]+1)/2.0)
         limit = math.sqrt(3.0*scale)
         weights.append(np.random.uniform(-limit, limit, size = (constant.weightDims[l+1],constant.weightDims[l]+1)))
 
 
-
 validDesMat = (validDesMat - np.mean(validDesMat)) / np.std(validDesMat)
-
 weights = rnn.learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain)
-# weights = rnn.learn([], [], weights, desMat, ytrain)
 
 
 for l in range(constant.numLayers):
@@ -88,7 +82,8 @@ for l in range(constant.numLayers):
 np.save("biases.npy", biases[0])
 np.save("kernels.npy", kernels[0])
 
-## Printing Orthogonality Properties
+
+## Printing orthogonality properties
 w1 = weights[0]
 u, s, vh = np.linalg.svd(w1)
 svDev = 0.0
@@ -97,9 +92,9 @@ for i in range(w1.shape[0]):
 
 print("avg squared deviation of sv from 1: ", svDev/(w1.shape[0]))
 print("singular values sum: ", s.sum())
+## Finish printing orthogonality properties
 
-
-# finished training weights
+## finished training weights
 
 
 # ## load weights for testing
@@ -151,6 +146,9 @@ for i in range(len(ytest)):
         ytest[i] = 0
 
 
+# Tests the model on a test set
+# TODO: This code is duplicated in rnn.py. This should be implemented as a
+# functional call to rnn.validate
 OutputList = []
 ActivationList = []
 
@@ -184,11 +182,10 @@ for i in range(len(ytest)):
 
     x = testDesMat[i]
 
-    # Starting Convolutional and Pooling Layers
+    ## Starting Convolutional and Pooling Layers
     map = rnn.convolve(x, kernels[0], biases[0])
     pooled, poolingTensor = rnn.pool(map)
     ActivationList[0] = np.vstack(([1],pooled.reshape(pooled.shape[0]*pooled.shape[1]*pooled.shape[2],1)))
-
     ## Done with Convolutional and Pooling Layers
 
     # # First activation if there are zero convolutional layers
@@ -228,6 +225,7 @@ print("avg squared deviation of sv from 1: ", svDev/(w1.shape[0]))
 print("singular values sum: ", s.sum())
 
 
+## Code for displaying images
 # print('data dim ', data.shape)
 # print('Y dim ', Y.shape)
 # print(X)
