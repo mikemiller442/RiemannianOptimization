@@ -1,1 +1,1 @@
-# RiemmanianOptimization
+# RiemannianOptimization
