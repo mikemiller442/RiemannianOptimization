@@ -3,35 +3,109 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import constant
 import rnn
-# 2 input units, ? hidden units and 1 output unit
 
-NUM_EPOCHS = 2500
-learnRate = 0.03
-batchSize = 10
-L = 3
-# 2 input units, 4 hidden units, 1 output unit
-s1 = 2
-s2 = 4
-s3 = 1
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+                'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+weightMatrixNames = ["w1.npy", "w2.npy", "w3.npy", "w4.npy", "w5.npy"]
+
+# # unit tests
+#
+# print("pool unit tests")
+# fm1 = np.zeros((2,5,5))
+# fm1[0] = np.array([1,2,3,4,-1,-7,8,9,10,11,12,-13,13,14,15,16,5,-5,7,-7,8,-2,-14,19,1]).reshape(5,5)
+# fm1[1] = np.array([1,12,3,-6,-1,-2,18,-94,1,-2,2,-103,3,-14,-15,3,5,-5,7,-7,8,-2,-14,19,1]).reshape(5,5)
+# print(fm1)
+# res, poolingTensor = rnn.pool(fm1)
+# print(res)
+# print("poolingTensor")
+# print(poolingTensor)
+#
+#
+# print("convolve unit tests")
+# biases = np.zeros((1,1))
+# biases[0] = [.5]
+# kt = np.zeros((1,2,2))
+# kt[0] = np.array([1,1,1,1]).reshape(2,2)
+# x = np.array([1,2,3,4,-1,-7,8,9,10,11,12,-13,13,14,15,16,5,-5,7,-7,8,-2,-14,19,1])
+# print(x.reshape(5,5))
+# mapX = rnn.convolve(x,kt,biases)
+# print(mapX)
+#
+# y = np.array([1,12,3,-6,-1,-2,18,-94,1,-2,2,-103,3,-14,-15,3,5,-5,7,-7,8,-2,-14,19,1])
+# print(y.reshape(5,5))
+# mapY = rnn.convolve(y,kt,biases)
+# print(mapY)
+#
+#
+# print("convBP unit tests")
+# dy = np.array([-1,-2,3.5,0.5]).reshape(1,2,2)
+# print(dy)
+# pt = np.zeros((1,4,4))
+# pt[0] = np.array([0,0,0,0,0,1,0,1,0,0,0,0,1,0,0,1]).reshape(4,4)
+# print("dim pt ", pt.shape)
+# pixels = np.array([1,2,3,4,-1,-7,8,9,10,11,12,-13,13,14,15,16,5,-5,7,-7,8,-2,-14,19,1]).reshape(5,5)
+# db, dw = rnn.convBP(dy, pt, pixels)
+# print(db)
+# print(dw)
+#
+# ## finished unit tests
+
+## load weights for testing
+kernels = []
+biases = []
+weights = []
+
+kernels.append(np.load("kernels.npy"))
+biases.append(np.load("biases.npy"))
+
+
+for l in range(constant.numLayers):
+    weights.append(np.load(weightMatrixNames[l]))
+## finished loading weights
+
+## Testing for Orthogonality
+
+## Finished Testing for Orthogonality
+
+w1 = weights[0]
+dotSum = 0.0
+for i in range(w1.shape[1]):
+    dotSum += np.dot(w1[:,i],w1[:,i]).item()
+
+print(dotSum/(w1.shape[1]))
+
+u, s, vh = np.linalg.svd(w1)
+svDev = 0.0
+for i in range(w1.shape[0]):
+    svDev += (s[i]-1)**2
+
+print("avg squared deviation of sv from 1: ", svDev/(w1.shape[0]))
+print("singular values sum: ", s.sum())
+print("dim w1: ", w1.shape)
+print("num singular values: ", s.shape)
+
+
+
+## exit if doing unit tests
+exit()
 
 
 def sigmoid(x):
     return 1/(1+np.exp(-x))
 
-
 def sigmoidPrime(x):
-    return sigmoid(x)*(1-sigmoid(x))
-
+    s = sigmoid(x)
+    return np.multiply(s,1-s)
 
 def ReLu(x):
-    return max(0,x)
-
+    x[x < 0] = 0
+    return x
 
 def ReluPrime(x):
-    if (x > 0):
-        return 1
-    else:
-        return 0
+    x[x < 0] = 0
+    x[x > 0] = 1
+    return x
 
 
 
@@ -76,7 +150,7 @@ w2 = pd.read_csv('w2b.csv', header=None).to_numpy() # w2 will be 1 by 5
 weights = [w1,w2]
 desMat2 = np.dstack((csvArray[:,0], csvArray[:,1])).reshape(m,2)
 desMat2 = np.expand_dims(desMat2, axis=1)
-weights = rnn.learn(weights, desMat2, ytrain)
+weights = rnn.learn([], [], weights, desMat2, ytrain)
 w1 = weights[0]
 w2 = weights[1]
 print("printing weights")
@@ -86,11 +160,11 @@ print(w2)
 ### done learning weights
 
 if (constant.sigmoidFunction == 1):
-    hg = np.vectorize(sigmoid)
+    hg = sigmoid
 else:
-    hg = np.vectorize(ReLu)
+    hg = ReLu
 
-g = np.vectorize(sigmoid)
+g = sigmoid
 
 
 # to be done after completed training
@@ -115,7 +189,7 @@ for i in range(len(ytest)):
     x = testDesMat[i]
     a1 = np.matrix(x).reshape(w1.shape[1],1)
     z2 = w1 @ a1
-    a2 = hg(z2)
+    a2 = hg(z2).reshape(z2.shape[0],1)
     a2 = np.vstack(([1],a2))
     z3 = w2 @ a2
     # print(z3)
