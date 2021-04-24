@@ -95,6 +95,7 @@ def convBP(dy, poolingTensor, pixels):
 # @param matrix This is the matrix with the enforced orthogonality constraints
 # @param momentum This is the momentum vector used in the algorithm
 # @param euclidGrad This is the euclidean gradient calculated in normal backpropagation
+# @return This returns the update parameter matrix and momentum vector
 def CayleySGD(matrix, momentum, euclidGrad):
     momentum = constant.momentumCoef*momentum - euclidGrad
     What = momentum @ matrix.transpose() - (1/2)*matrix @ (matrix.transpose() @ momentum @ matrix.transpose())
@@ -110,7 +111,8 @@ def CayleySGD(matrix, momentum, euclidGrad):
 # Learns the convolutional neural network
 # TODO: extend learn to accommodate more than one convolutional + pooling
 # layer in the architecture
-def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
+# returns the parameters for the neural network
+def learn(weights, kernels, biases, desMat, ytrain, validDesMat, vyTrain):
     print("In rnn.learn")
     if (constant.sigmoidFunction == 1):
         hg = sigmoid
@@ -161,9 +163,13 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
 
     cost = 0
     for i in range(constant.NUM_EPOCHS):
+        if (i == 10):
+            constant.learnRate = constant.decayParam*constant.learnRate
+            constant.orthoLearnRate = constant.decayParam*constant.orthoLearnRate
+
         if (i % constant.printCost == 0):
             if (i > 0):
-                validationAccuracy = validate(kernels, biases, weights, validDesMat, vyTrain)
+                validationAccuracy = validate(weights, kernels, biases, validDesMat, vyTrain)
                 print("validationAccuracy: ", validationAccuracy)
                 w1 = weights[0]
                 u, s, vh = np.linalg.svd(w1)
@@ -271,12 +277,12 @@ def learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain):
             kernels[0] = kernels[0] - constant.learnRate*(DeltaW/constant.batchSize)
             biases[0] = biases[0] - constant.learnRate*(DeltaB/constant.batchSize)
 
+    return weights, kernels, biases
 
-    return weights
 
 # validates the model on a validation set during training
 # @return int This returns the number of correct predictions in validation set
-def validate(kernels, biases, weights, validDesMat, vyTrain):
+def validate(weights, kernels, biases, validDesMat, vyTrain):
     OutputList = []
     ActivationList = []
 

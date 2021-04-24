@@ -42,9 +42,9 @@ for i in range(len(vyTrain)):
     else:
         vyTrain[i] = 0
 
+weights = []
 kernels = []
 biases = []
-weights = []
 
 np.random.seed(0)
 kernels.append(np.random.rand(constant.numKernels[0],constant.maskHeight,constant.maskWidth))
@@ -72,7 +72,7 @@ else:
 
 
 validDesMat = (validDesMat - np.mean(validDesMat)) / np.std(validDesMat)
-weights = rnn.learn(kernels, biases, weights, desMat, ytrain, validDesMat, vyTrain)
+weights, kernels, biases = rnn.learn(weights, kernels, biases, desMat, ytrain, validDesMat, vyTrain)
 
 
 for l in range(constant.numLayers):
