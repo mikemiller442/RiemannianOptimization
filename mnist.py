@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import cv2 as cv
-import matplotlib.pyplot as plt
 import pandas as pd
 import rnn
 import constant
