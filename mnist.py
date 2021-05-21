@@ -43,12 +43,31 @@ for i in range(len(vyTrain)):
         vyTrain[i] = 0
 
 weights = []
+layerKernels = []
+layerBiases = []
+
+np.random.seed(0)
+
+kernels = []
+biases = []
+kernels.append(np.random.rand(constant.numKernels[0],constant.maskDim[0],constant.maskDim[0]))
+biases.append(np.random.rand(constant.numKernels[0],1))
+
+layerKernels.append(kernels)
+layerBiases.append(biases)
+
 kernels = []
 biases = []
 
-np.random.seed(0)
-kernels.append(np.random.rand(constant.numKernels[0],constant.maskHeight,constant.maskWidth))
-biases.append(np.random.rand(constant.numKernels[0],1))
+for p in range(constant.numKernels[0]):
+    kernels.append(np.random.rand(constant.numKernels[1],constant.maskDim[1],constant.maskDim[1]))
+    biases.append(np.random.rand(constant.numKernels[1],1))
+
+layerKernels.append(kernels)
+layerBiases.append(biases)
+
+# kernels.append(np.random.rand(constant.numKernels[0],constant.maskHeight,constant.maskWidth))
+# biases.append(np.random.rand(constant.numKernels[0],1))
 
 if (constant.riemann == 1):
     # Constructs random positive definite matrix and chooses the eigenvectors
@@ -72,7 +91,7 @@ else:
 
 
 validDesMat = (validDesMat - np.mean(validDesMat)) / np.std(validDesMat)
-weights, kernels, biases = rnn.learn(weights, kernels, biases, desMat, ytrain, validDesMat, vyTrain)
+weights, kernels, biases = rnn.learn(weights, layerKernels, layerBiases, desMat, ytrain, validDesMat, vyTrain)
 
 
 for l in range(constant.numLayers):
@@ -183,10 +202,35 @@ for i in range(len(ytest)):
     x = testDesMat[i]
 
     ## Starting Convolutional and Pooling Layers
-    map = rnn.convolve(x, kernels[0], biases[0])
-    pooled, poolingTensor = rnn.pool(map)
-    ActivationList[0] = np.vstack(([1],pooled.reshape(pooled.shape[0]*pooled.shape[1]*pooled.shape[2],1)))
-    ## Done with Convolutional and Pooling Layers
+
+    map = convolve(x, kernels[0][0], biases[0][0])
+    pooled, poolingTensor = pool(map)
+    PooledList.append(pooled)
+    PoolingTensorList.append(poolingTensor)
+
+    featureMaps = []
+    featureMapTensors = []
+
+    for l in range(pooled.shape[0]):
+        map = convolve(PooledList[0][l], kernels[1][l], biases[1][l])
+        pooled, poolingTensor = pool(map)
+        featureMaps.append(pooled)
+        featureMapTensors.append(poolingTensor)
+
+    cumulativeMap = featureMaps[0]
+    cumulatePoolingTensor = featureMapTensors[0]
+
+    for l in range(1, pooled.shape[0]):
+        cumulativeMap = np.hstack((cumulativeMap, featureMaps[1]))
+        cumulatePoolingTensor = np.hstack((cumulatePoolingTensor, featureMapTensors[1]))
+
+
+    ActivationList[0] = np.vstack(([1],cumulativeMap.reshape(cumulativeMap.shape[0]*cumulativeMap.shape[1]*cumulativeMap.shape[2],1)))
+
+    # map = rnn.convolve(x, kernels[0], biases[0])
+    # pooled, poolingTensor = rnn.pool(map)
+    # ActivationList[0] = np.vstack(([1],pooled.reshape(pooled.shape[0]*pooled.shape[1]*pooled.shape[2],1)))
+    # ## Done with Convolutional and Pooling Layers
 
     # # First activation if there are zero convolutional layers
     # ActivationList[0] = np.vstack(([1],x.reshape(constant.weightDims[0],1)))
